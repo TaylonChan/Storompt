@@ -103,16 +103,23 @@ def make_response(message, history, additional):
     response = conversation.predict(input=message)
     return response
 
-gr.ChatInterface(
-    make_response,
-    examples=[
-        ["Hail, wise one! I have come to seek your counsel and guidance."],
-        ["I'm on a quest to defeat the darkness that has consumed our kingdom. Can you help me find the source of the evil and put an end to it once and for all?"],
-        ["My village was destroyed by the dark forces that roam these lands. Do you know where I might find allies to join me in my fight against them?"],
-        ["I heard rumors of a powerful artifact hidden deep within the forest. Is there any truth to these whispers, and if so, how can I obtain it?"]
-    ],
-    additional_inputs="text"
-).launch(
+with gr.Blocks() as app:
+    with gr.Row():
+        with gr.Column():
+            gr.JSON()
+        with gr.Column():
+            gr.ChatInterface(
+                make_response,
+                examples=[
+                    ["Hello, wise one! I have come to seek your counsel and guidance."],
+                    ["I'm on a quest to defeat the darkness that has consumed our kingdom. Can you help me find the source of the evil and put an end to it once and for all?"],
+                    ["My village was destroyed by the dark forces that roam these lands. Do you know where I might find allies to join me in my fight against them?"],
+                    ["I heard rumors of a powerful artifact hidden deep within the forest. Is there any truth to these whispers, and if so, how can I obtain it?"]
+                ],
+                additional_inputs="text"
+            )
+
+app.launch(
     share=True,
     inbrowser=True,
     show_error=True
