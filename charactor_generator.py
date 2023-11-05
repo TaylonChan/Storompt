@@ -68,5 +68,5 @@ with gr.Blocks() as app:
 if __name__ == "__main__":
     app.launch(
         share=True,
-        show_tips=True
+        ## show_tips=True
     )

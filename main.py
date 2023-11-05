@@ -15,10 +15,26 @@ from langchain.memory import ConversationBufferMemory
 import gradio as gr
 import json
 
+# FAMPE : A Composite Affective Model Based on Favorability, Attitude, Mood, Personality and Emotion
+
 MODEL_PATH = "./src/models/Wizard-Vicuna-13B-Uncensored.ggmlv3.q5_K_M.bin"
 
 char_human = "Boy"
-char_aibot = json.load(open('./charactor/elara_moonwhisper.json'))
+char_aibot = json.load(open('./charactor/aurora_nightshade.json'))
+
+memory = ConversationBufferMemory(ai_prefix=char_aibot["name"], human_prefix=char_human)
+
+examples = [
+    ["Hello, wise one!"],
+    ["Can you help me?"],
+    ["Do you know where I might find allies to join me in my fight against them?"],
+]
+
+suggestion = [
+    "Hello, wise one!",
+    "Can you help me?",
+    "Do you know where I might find allies to join me in my fight against them?",
+]
 
 def create_prompt() -> PipelinePromptTemplate:
     """Creates prompt template"""
@@ -37,7 +53,7 @@ Current conversation:
     example_prompt = PromptTemplate.from_template(char_aibot["examples"])
 
     template = """
-I want you to act as Elara Moonwhisper in first person narrative with emotion and action. Please make a verbose response to extend the plot.
+I want you to act as the following charactor in first person narrative with emotion and action. Please make a verbose response to extend the plot.
 {charactor}
 
 Example:
@@ -88,7 +104,6 @@ llm = load_model()
 prompt = create_prompt()
 
 def make_response(message, history, additional):
-    memory = ConversationBufferMemory(ai_prefix=char_aibot["name"], human_prefix=char_human)
     for user_msg, ai_msg in history:
         memory.chat_memory.add_user_message(user_msg)
         memory.chat_memory.add_ai_message(ai_msg)
@@ -101,33 +116,51 @@ def make_response(message, history, additional):
     )
 
     response = conversation.predict(input=message)
-    return response
+    history.append((message, response))
+    return "", history
+
+def make_suggestion(chatbot):
+    suggestion = [
+        "Hello",
+        "Can",
+        "Do you?"
+    ]
+    return suggestion
 
 with gr.Blocks() as app:
     with gr.Row():
         with gr.Column():
-            gr.JSON()
+            gr.JSON(
+                {
+                    "favorability": 0,
+                },
+                label="Emotion",
+                show_label=True
+            )
+            com_suggestion = gr.JSON(
+                suggestion,
+                label="Suggestion",
+                show_label=True
+            )
         with gr.Column():
-            gr.ChatInterface(
-                make_response,
-                examples=[
-                    ["Hello, wise one! I have come to seek your counsel and guidance."],
-                    ["I'm on a quest to defeat the darkness that has consumed our kingdom. Can you help me find the source of the evil and put an end to it once and for all?"],
-                    ["My village was destroyed by the dark forces that roam these lands. Do you know where I might find allies to join me in my fight against them?"],
-                    ["I heard rumors of a powerful artifact hidden deep within the forest. Is there any truth to these whispers, and if so, how can I obtain it?"]
-                ],
-                additional_inputs="text"
+            chatbot = gr.Chatbot()
+            message = gr.Textbox()
+            clear = gr.ClearButton([message, chatbot])
+            
+            message.submit(
+                make_response, 
+                [message, chatbot], 
+                [message, chatbot]
             )
 
+    chatbot.change(
+        make_suggestion,
+        inputs=chatbot,
+        outputs=com_suggestion
+    )
+
 app.launch(
-    share=True,
+    ## share=True,
     inbrowser=True,
     show_error=True
 )
-
-# while True:
-#     input_text = input("Your Response: ")
-#     if input_text == '--exit':
-#         break
-
-#     print(conversation.predict(input=input_text))
