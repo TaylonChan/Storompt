@@ -1,3 +1,5 @@
+import langchain
+
 from langchain.llms import CTransformers
 from langchain import LLMChain
 from langchain.prompts import PromptTemplate, load_prompt
@@ -11,9 +13,12 @@ from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
+from langchain.output_parsers import CommaSeparatedListOutputParser
 
 import gradio as gr
 import json
+
+langchain.debug = True
 
 # FAMPE : A Composite Affective Model Based on Favorability, Attitude, Mood, Personality and Emotion
 
@@ -22,17 +27,14 @@ MODEL_PATH = "./src/models/Wizard-Vicuna-13B-Uncensored.ggmlv3.q5_K_M.bin"
 char_human = "Boy"
 char_aibot = json.load(open('./charactor/aurora_nightshade.json'))
 
-examples = [
-    ["Hello, wise one!"],
-    ["Can you help me?"],
-    ["Do you know where I might find allies to join me in my fight against them?"],
-]
-
 suggestion = [
     "Hello, wise one!",
     "Can you help me?",
     "Do you know where I might find allies to join me in my fight against them?",
 ]
+
+output_parser = CommaSeparatedListOutputParser()
+format_instructions = output_parser.get_format_instructions()
 
 def create_prompt() -> PipelinePromptTemplate:
     """Creates prompt template"""
@@ -78,11 +80,17 @@ def create_suggestion_prompt() -> PipelinePromptTemplate:
     charactor_prompt = PromptTemplate.from_template(char_aibot["template"])
 
     template = """
-I want you to generate 3 possible responses for the current conversation with following background infomation. Please make a verbose response to extend the plot.
+I want you to generate 3 possible options(sentences) for the current conversation for a role playing game with following background infomation in JSON list format.
 {charactor}
 
+Current conversation:
+Boy: Hello
+Aurora Nightshade: Hi! My name is Aurora and I am 21 years old with short black hair and piercing blue eyes. You know how people say some places are haunted? Well, I can actually see those ghosts. It started when I was a kid, and now, I'm determined to make sense of it all. Do you believe in ghosts too? Maybe we can help each other figure out what's going on.
+Boy: No, I don't
+Aurora Nightshade: Really? That's interesting. So, have you ever experienced anything strange or unusual? 
+
 Format:
-["", "", ""]"""
+["Option 1", "Option 2", "Option 3"]"""
 
     final_prompt = PromptTemplate.from_template(template)
     input_prompts = [
@@ -140,11 +148,14 @@ def make_response(message, history, additional):
     return "", history
 
 def make_suggestion(chatbot):
-    suggestion = [
-        "Hello",
-        "Can",
-        "Do you?"
-    ]
+
+    suggestion_prompt = create_suggestion_prompt()
+    result = LLMChain(
+        prompt=suggestion_prompt,
+        llm=llm, 
+        verbose=True
+    )
+    suggestion = result.predict()
     return suggestion
 
 with gr.Blocks() as app:
@@ -163,11 +174,25 @@ with gr.Blocks() as app:
                 show_label=True
             )
         with gr.Column():
-            chatbot = gr.Chatbot()
-            message = gr.Textbox()
-            clear = gr.ClearButton([message, chatbot])
-            
-            message.submit(
+            chatbot = gr.Chatbot(
+                bubble_full_width=False,
+                show_share_button=True,
+                show_copy_button=True,
+                likeable=True
+            )
+            message = gr.Textbox(
+                label="Your Response"
+            )
+            with gr.Row():
+                submit = gr.Button(
+                    value="✨ Deliver"
+                )
+                clear = gr.ClearButton(
+                    [message, chatbot],
+                    value="🗑️ Clear"
+                )
+            gr.on(
+                [message.submit, submit.click],
                 make_response, 
                 [message, chatbot], 
                 [message, chatbot]
