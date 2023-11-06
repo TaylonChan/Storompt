@@ -22,8 +22,6 @@ MODEL_PATH = "./src/models/Wizard-Vicuna-13B-Uncensored.ggmlv3.q5_K_M.bin"
 char_human = "Boy"
 char_aibot = json.load(open('./charactor/aurora_nightshade.json'))
 
-memory = ConversationBufferMemory(ai_prefix=char_aibot["name"], human_prefix=char_human)
-
 examples = [
     ["Hello, wise one!"],
     ["Can you help me?"],
@@ -75,6 +73,27 @@ Example:
 
     return pipeline_prompt
 
+def create_suggestion_prompt() -> PipelinePromptTemplate:
+    """Creates suggestion prompt template"""
+    charactor_prompt = PromptTemplate.from_template(char_aibot["template"])
+
+    template = """
+I want you to generate 3 possible responses for the current conversation with following background infomation. Please make a verbose response to extend the plot.
+{charactor}
+
+Format:
+["", "", ""]"""
+
+    final_prompt = PromptTemplate.from_template(template)
+    input_prompts = [
+        ("charactor", charactor_prompt)
+    ]
+    pipeline_prompt = PipelinePromptTemplate(
+        final_prompt=final_prompt, 
+        pipeline_prompts=input_prompts
+    )
+    return pipeline_prompt
+
 def load_model() -> CTransformers:
     """Load Llama model with defined setting"""
     callback_manager: CallbackManager = CallbackManager([StreamingStdOutCallbackHandler()])
@@ -104,6 +123,7 @@ llm = load_model()
 prompt = create_prompt()
 
 def make_response(message, history, additional):
+    memory = ConversationBufferMemory(ai_prefix=char_aibot["name"], human_prefix=char_human)
     for user_msg, ai_msg in history:
         memory.chat_memory.add_user_message(user_msg)
         memory.chat_memory.add_ai_message(ai_msg)
