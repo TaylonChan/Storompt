@@ -23,6 +23,7 @@ langchain.debug = True
 # FAMPE : A Composite Affective Model Based on Favorability, Attitude, Mood, Personality and Emotion
 
 MODEL_PATH = "./src/models/Wizard-Vicuna-13B-Uncensored.ggmlv3.q5_K_M.bin"
+MODEL_PATH_SUGGEST = "./src/models/llama2-7b-chat.ggmlv3.q6_K.bin"
 
 char_human = "Boy"
 char_aibot = json.load(open('./charactor/aurora_nightshade.json'))
@@ -102,7 +103,7 @@ Format:
     )
     return pipeline_prompt
 
-def load_model() -> CTransformers:
+def load_model(model_path) -> CTransformers:
     """Load Llama model with defined setting"""
     callback_manager: CallbackManager = CallbackManager([StreamingStdOutCallbackHandler()])
     n_gpu_layers = 40
@@ -110,7 +111,7 @@ def load_model() -> CTransformers:
 
     # make sure the model path is correct for your system!
     llama_model: CTransformers = CTransformers(
-        model=MODEL_PATH, 
+        model=model_path, 
         model_type='llama', 
         verbose=True,
         temperature=0.5,
@@ -127,7 +128,8 @@ def load_model() -> CTransformers:
     
     return llama_model
 
-llm = load_model()
+llm = load_model(MODEL_PATH)
+llm_suggest = load_model(MODEL_PATH_SUGGEST)
 prompt = create_prompt()
 
 def make_response(message, history, additional):
@@ -144,6 +146,7 @@ def make_response(message, history, additional):
     )
 
     response = conversation.predict(input=message)
+
     history.append((message, response))
     return "", history
 
@@ -152,10 +155,10 @@ def make_suggestion(chatbot):
     suggestion_prompt = create_suggestion_prompt()
     result = LLMChain(
         prompt=suggestion_prompt,
-        llm=llm, 
+        llm=llm_suggest, 
         verbose=True
     )
-    suggestion = result.predict()
+    suggestion = json.dumps(result.predict())
     return suggestion
 
 with gr.Blocks() as app:
@@ -185,7 +188,8 @@ with gr.Blocks() as app:
             )
             with gr.Row():
                 submit = gr.Button(
-                    value="✨ Deliver"
+                    value="✨ Deliver",
+                    scale=3
                 )
                 clear = gr.ClearButton(
                     [message, chatbot],
