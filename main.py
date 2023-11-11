@@ -81,19 +81,28 @@ def create_suggestion_prompt() -> PipelinePromptTemplate:
     charactor_prompt = PromptTemplate.from_template(char_aibot["template"])
 
     template = """
-I want you to generate 3 possible options(sentences) for the current conversation for a role playing game with following background infomation in JSON list format.
+I want you to generate 3 possible options(responses) for the following charactor in the current conversation for a role playing game with following background infomation in JSON list format.
 {charactor}
+
+Output Example in JSON list format:
+["I don't think we should trust him. He could be working for the other side.", "Let's bring him in and see what he knows. We might need his expertise to take down our target.", "I don't like this. Let's get out of here while we still can."]
+
+{format_instructions}
 
 Current conversation:
 Boy: Hello
 Aurora Nightshade: Hi! My name is Aurora and I am 21 years old with short black hair and piercing blue eyes. You know how people say some places are haunted? Well, I can actually see those ghosts. It started when I was a kid, and now, I'm determined to make sense of it all. Do you believe in ghosts too? Maybe we can help each other figure out what's going on.
 Boy: No, I don't
-Aurora Nightshade: Really? That's interesting. So, have you ever experienced anything strange or unusual? 
+Aurora Nightshade: Really? That's interesting. So, have you ever experienced anything strange or unusual?
+Boy: 
 
-Format:
-["Option 1", "Option 2", "Option 3"]"""
+Your Output:
+"""
 
-    final_prompt = PromptTemplate.from_template(template)
+    final_prompt = PromptTemplate.from_template(
+        template,
+        partial_variables={"format_instructions": format_instructions}
+    )
     input_prompts = [
         ("charactor", charactor_prompt)
     ]
@@ -103,7 +112,7 @@ Format:
     )
     return pipeline_prompt
 
-def load_model(model_path) -> CTransformers:
+def load_model(model_path, stop=['\n']) -> CTransformers:
     """Load Llama model with defined setting"""
     callback_manager: CallbackManager = CallbackManager([StreamingStdOutCallbackHandler()])
     n_gpu_layers = 40
@@ -122,14 +131,14 @@ def load_model(model_path) -> CTransformers:
         config={
             'context_length': 2048,
             'stream': True,
-            'stop': ['\n']
+            'stop': stop
         }
     )
     
     return llama_model
 
 llm = load_model(MODEL_PATH)
-llm_suggest = load_model(MODEL_PATH_SUGGEST)
+llm_suggest = load_model(MODEL_PATH, None)
 prompt = create_prompt()
 
 def make_response(message, history, additional):
