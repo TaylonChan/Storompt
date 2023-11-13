@@ -13,17 +13,15 @@ from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
-from langchain.output_parsers import CommaSeparatedListOutputParser
 
 import gradio as gr
 import json
 
-langchain.debug = True
+# langchain.debug = True
 
 # FAMPE : A Composite Affective Model Based on Favorability, Attitude, Mood, Personality and Emotion
 
 MODEL_PATH = "./src/models/Wizard-Vicuna-13B-Uncensored.ggmlv3.q5_K_M.bin"
-MODEL_PATH_SUGGEST = "./src/models/llama2-7b-chat.ggmlv3.q6_K.bin"
 
 char_human = "Boy"
 char_aibot = json.load(open('./charactor/aurora_nightshade.json'))
@@ -33,9 +31,6 @@ suggestion = [
     "Can you help me?",
     "Do you know where I might find allies to join me in my fight against them?",
 ]
-
-output_parser = CommaSeparatedListOutputParser()
-format_instructions = output_parser.get_format_instructions()
 
 def create_prompt() -> PipelinePromptTemplate:
     """Creates prompt template"""
@@ -84,10 +79,8 @@ def create_suggestion_prompt() -> PipelinePromptTemplate:
 I want you to generate 3 possible options(responses) for the following charactor in the current conversation for a role playing game with following background infomation in JSON list format.
 {charactor}
 
-Output Example in JSON list format:
+Your response should be a list of comma separated values, eg:
 ["I don't think we should trust him. He could be working for the other side.", "Let's bring him in and see what he knows. We might need his expertise to take down our target.", "I don't like this. Let's get out of here while we still can."]
-
-{format_instructions}
 
 Current conversation:
 Boy: Hello
@@ -99,10 +92,7 @@ Boy:
 Your Output:
 """
 
-    final_prompt = PromptTemplate.from_template(
-        template,
-        partial_variables={"format_instructions": format_instructions}
-    )
+    final_prompt = PromptTemplate.from_template(template)
     input_prompts = [
         ("charactor", charactor_prompt)
     ]
