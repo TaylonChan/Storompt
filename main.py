@@ -1,5 +1,3 @@
-import langchain
-
 from langchain.llms import CTransformers
 from langchain import LLMChain
 from langchain.prompts import PromptTemplate, load_prompt
@@ -16,6 +14,10 @@ from langchain.memory import ConversationBufferMemory
 
 import gradio as gr
 import json
+
+# Debug Libs
+import langchain
+import time
 
 # langchain.debug = True
 
@@ -71,7 +73,7 @@ Example:
 
     return pipeline_prompt
 
-def create_suggestion_prompt() -> PipelinePromptTemplate:
+def create_suggestion_prompt(history) -> PipelinePromptTemplate:
     """Creates suggestion prompt template"""
     charactor_prompt = PromptTemplate.from_template(char_aibot["template"])
 
@@ -83,16 +85,17 @@ Your response should be a list of comma separated values, eg:
 ["I don't think we should trust him. He could be working for the other side.", "Let's bring him in and see what he knows. We might need his expertise to take down our target.", "I don't like this. Let's get out of here while we still can."]
 
 Current conversation:
-Boy: Hello
-Aurora Nightshade: Hi! My name is Aurora and I am 21 years old with short black hair and piercing blue eyes. You know how people say some places are haunted? Well, I can actually see those ghosts. It started when I was a kid, and now, I'm determined to make sense of it all. Do you believe in ghosts too? Maybe we can help each other figure out what's going on.
-Boy: No, I don't
-Aurora Nightshade: Really? That's interesting. So, have you ever experienced anything strange or unusual?
-Boy: 
+{history}
 
 Your Output:
 """
 
-    final_prompt = PromptTemplate.from_template(template)
+    final_prompt = PromptTemplate.from_template(
+        template,
+        partial_variables={
+            "history":history
+        }
+    )
     input_prompts = [
         ("charactor", charactor_prompt)
     ]
@@ -149,15 +152,23 @@ def make_response(message, history, additional):
     history.append((message, response))
     return "", history
 
-def make_suggestion(chatbot):
+def make_suggestion(message, history):
+    memory = ConversationBufferMemory(ai_prefix=char_aibot["name"], human_prefix=char_human)
+    for user_msg, ai_msg in history:
+        print(user_msg, ai_msg)
+        memory.chat_memory.add_user_message(user_msg)
+        memory.chat_memory.add_ai_message(ai_msg)
 
-    suggestion_prompt = create_suggestion_prompt()
-    result = LLMChain(
-        prompt=suggestion_prompt,
-        llm=llm_suggest, 
+    suggestion_result = ConversationChain(
+        prompt=prompt,
+        llm=llm, 
+        memory=memory,
         verbose=True
     )
-    suggestion = json.dumps(result.predict())
+
+    response = suggestion_result.predict(input=message)
+
+    suggestion = json.dumps(response)
     return suggestion
 
 with gr.Blocks() as app:
@@ -199,13 +210,11 @@ with gr.Blocks() as app:
                 make_response, 
                 [message, chatbot], 
                 [message, chatbot]
+            ).then(
+                make_suggestion, 
+                [message, chatbot], 
+                com_suggestion
             )
-
-    chatbot.change(
-        make_suggestion,
-        inputs=chatbot,
-        outputs=com_suggestion
-    )
 
 app.launch(
     ## share=True,
