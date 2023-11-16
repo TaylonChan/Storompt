@@ -73,35 +73,34 @@ Example:
 
     return pipeline_prompt
 
-def create_suggestion_prompt(history) -> PipelinePromptTemplate:
+def create_suggestion_prompt() -> PipelinePromptTemplate:
     """Creates suggestion prompt template"""
     charactor_prompt = PromptTemplate.from_template(char_aibot["template"])
+    conrecord_prompt = PromptTemplate.from_template(
+    """
+Current conversation:
+{history} {input}"""
+    )
 
     template = """
-I want you to generate 3 possible options(responses) for the following charactor in the current conversation for a role playing game with following background infomation in JSON list format.
+I want you to act as the following charactor in first person narrative with emotion and action. Please make a verbose response to extend the plot.
 {charactor}
 
-Your response should be a list of comma separated values, eg:
-["I don't think we should trust him. He could be working for the other side.", "Let's bring him in and see what he knows. We might need his expertise to take down our target.", "I don't like this. Let's get out of here while we still can."]
-
-Current conversation:
-{history}
+{conrecord}
+Boy: 
 
 Your Output:
 """
 
-    final_prompt = PromptTemplate.from_template(
-        template,
-        partial_variables={
-            "history":history
-        }
-    )
+    final_prompt = PromptTemplate.from_template(template)
     input_prompts = [
-        ("charactor", charactor_prompt)
+        ("charactor", charactor_prompt),
+        ("conrecord", conrecord_prompt)
     ]
     pipeline_prompt = PipelinePromptTemplate(
         final_prompt=final_prompt, 
-        pipeline_prompts=input_prompts
+        pipeline_prompts=input_prompts,
+        input_variables=["history", "input"]
     )
     return pipeline_prompt
 
@@ -131,8 +130,8 @@ def load_model(model_path, stop=['\n']) -> CTransformers:
     return llama_model
 
 llm = load_model(MODEL_PATH)
-llm_suggest = load_model(MODEL_PATH, None)
 prompt = create_prompt()
+prompt_suggest = create_suggestion_prompt()
 
 def make_response(message, history, additional):
     memory = ConversationBufferMemory(ai_prefix=char_aibot["name"], human_prefix=char_human)
@@ -155,12 +154,11 @@ def make_response(message, history, additional):
 def make_suggestion(message, history):
     memory = ConversationBufferMemory(ai_prefix=char_aibot["name"], human_prefix=char_human)
     for user_msg, ai_msg in history:
-        print(user_msg, ai_msg)
         memory.chat_memory.add_user_message(user_msg)
         memory.chat_memory.add_ai_message(ai_msg)
 
     suggestion_result = ConversationChain(
-        prompt=prompt,
+        prompt=prompt_suggest,
         llm=llm, 
         memory=memory,
         verbose=True
