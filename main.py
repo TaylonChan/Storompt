@@ -26,13 +26,9 @@ import time
 MODEL_PATH = "./src/models/Wizard-Vicuna-13B-Uncensored.ggmlv3.q5_K_M.bin"
 
 char_human = "Boy"
-char_aibot = json.load(open('./charactor/aurora_nightshade.json'))
+char_aibot = json.load(open('./charactor/lila_nightshade.json'))
 
-suggestion = [
-    "Hello, wise one!",
-    "Can you help me?",
-    "Do you know where I might find allies to join me in my fight against them?",
-]
+suggestion = json.dumps("")
 
 def create_prompt() -> PipelinePromptTemplate:
     """Creates prompt template"""
@@ -57,7 +53,10 @@ I want you to act as the following charactor in first person narrative with emot
 Example:
 {example}
 
-{conrecord}"""
+{conrecord}
+
+Your Output:
+"""
 
     final_prompt = PromptTemplate.from_template(template)
     input_prompts = [
@@ -115,7 +114,7 @@ def load_model(model_path, stop=['\n']) -> CTransformers:
         model=model_path, 
         model_type='llama', 
         verbose=True,
-        temperature=0.5,
+        temperature=0.85,
         max_new_token=2048,
         n_gpu_layers=n_gpu_layers,
         n_batch=n_batch,
