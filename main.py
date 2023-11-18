@@ -83,7 +83,6 @@ Current conversation:
 
     template = """
 I want you to act as the following charactor in first person narrative with emotion and action. Please make a verbose response to extend the plot.
-{charactor}
 
 {conrecord}
 Boy: 
@@ -93,7 +92,6 @@ Your Output:
 
     final_prompt = PromptTemplate.from_template(template)
     input_prompts = [
-        ("charactor", charactor_prompt),
         ("conrecord", conrecord_prompt)
     ]
     pipeline_prompt = PipelinePromptTemplate(
@@ -138,14 +136,19 @@ def make_response(message, history, additional):
         memory.chat_memory.add_user_message(user_msg)
         memory.chat_memory.add_ai_message(ai_msg)
 
-    conversation = ConversationChain(
-        prompt=prompt,
-        llm=llm, 
-        memory=memory,
-        verbose=True
-    )
+    while True:
+        conversation = ConversationChain(
+            prompt=prompt,
+            llm=llm, 
+            memory=memory,
+            verbose=True
+        )
 
-    response = conversation.predict(input=message)
+        response = conversation.predict(input=message)
+        if not response or response.isspace():
+            print("Empty Response")
+        else:
+            break
 
     history.append((message, response))
     return "", history
@@ -156,14 +159,19 @@ def make_suggestion(message, history):
         memory.chat_memory.add_user_message(user_msg)
         memory.chat_memory.add_ai_message(ai_msg)
 
-    suggestion_result = ConversationChain(
-        prompt=prompt_suggest,
-        llm=llm, 
-        memory=memory,
-        verbose=True
-    )
+    while True:
+        suggestion_result = ConversationChain(
+            prompt=prompt_suggest,
+            llm=llm, 
+            memory=memory,
+            verbose=True
+        )
 
-    response = suggestion_result.predict(input=message)
+        response = suggestion_result.predict(input=message)
+        if not response or response.isspace():
+            print("Empty Response")
+        else:
+            break
 
     suggestion = json.dumps(response)
     return suggestion
