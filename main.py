@@ -25,8 +25,9 @@ import time
 
 MODEL_PATH = "./src/models/Wizard-Vicuna-13B-Uncensored.ggmlv3.q5_K_M.bin"
 
+charactor_name = "lila_nightshade"
 char_human = "Boy"
-char_aibot = json.load(open('./charactor/lila_nightshade.json'))
+char_aibot = json.load(open(f'./charactor/{charactor_name}.json'))
 
 suggestion = json.dumps("")
 
@@ -53,10 +54,7 @@ I want you to act as the following charactor in first person narrative with emot
 Example:
 {example}
 
-{conrecord}
-
-Your Output:
-"""
+{conrecord}"""
 
     final_prompt = PromptTemplate.from_template(template)
     input_prompts = [
@@ -85,10 +83,7 @@ Current conversation:
 I want you to act as the following charactor in first person narrative with emotion and action. Please make a verbose response to extend the plot.
 
 {conrecord}
-Boy: 
-
-Your Output:
-"""
+Boy:"""
 
     final_prompt = PromptTemplate.from_template(template)
     input_prompts = [
@@ -125,10 +120,6 @@ def load_model(model_path, stop=['\n']) -> CTransformers:
     )
     
     return llama_model
-
-llm = load_model(MODEL_PATH)
-prompt = create_prompt()
-prompt_suggest = create_suggestion_prompt()
 
 def make_response(message, history, additional):
     memory = ConversationBufferMemory(ai_prefix=char_aibot["name"], human_prefix=char_human)
@@ -176,9 +167,37 @@ def make_suggestion(message, history):
     suggestion = json.dumps(response)
     return suggestion
 
+def change_charactor(charactor):
+    global charactor_name, char_aibot
+    charactor_name = charactor
+    char_aibot = json.load(open(f'./charactor/{charactor_name}.json'))
+    init_chat()
+
+def init_chat():
+    global llm, prompt, prompt_suggest
+    llm = load_model(MODEL_PATH)
+    prompt = create_prompt()
+    prompt_suggest = create_suggestion_prompt()
+
+llm = load_model(MODEL_PATH)
+prompt = create_prompt()
+prompt_suggest = create_suggestion_prompt()
+
 with gr.Blocks() as app:
     with gr.Row():
         with gr.Column():
+            radio_char = gr.Radio(
+                [
+                    ("Elara Moonwhisper", "elara_moonwhisper"),
+                    ("Lila Nightshade", "lila_nightshade"),
+                    ("Eirax Darkhunter", "eirax_darkhunter"),
+                    ("Aurora Nightshade", "aurora_nightshade"),
+                    ("Arcturus Starseeker", "arcturus_starseeker"),
+                    ("Arcturus Ironwood", "arcturus_ironwood")
+                ],
+                label="Please choose a charactor",
+                show_label=True
+            )
             gr.JSON(
                 {
                     "favorability": 0,
@@ -219,6 +238,13 @@ with gr.Blocks() as app:
                 make_suggestion, 
                 [message, chatbot], 
                 com_suggestion
+            )
+            radio_char.change(
+                change_charactor,
+                radio_char,
+            ).then(
+                None,
+                js="window.location.reload()"
             )
 
 app.launch(
