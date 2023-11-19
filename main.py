@@ -121,7 +121,7 @@ def load_model(model_path, stop=['\n']) -> CTransformers:
     
     return llama_model
 
-def make_response(message, history, additional):
+def make_response(message, history):
     memory = ConversationBufferMemory(ai_prefix=char_aibot["name"], human_prefix=char_human)
     for user_msg, ai_msg in history:
         memory.chat_memory.add_user_message(user_msg)
@@ -179,9 +179,7 @@ def init_chat():
     prompt = create_prompt()
     prompt_suggest = create_suggestion_prompt()
 
-llm = load_model(MODEL_PATH)
-prompt = create_prompt()
-prompt_suggest = create_suggestion_prompt()
+init_chat()
 
 with gr.Blocks() as app:
     with gr.Row():
