@@ -174,8 +174,8 @@ def make_suggestion(message, history):
     suggestion = json.dumps(response)
     return suggestion
 
-def classify_sentiment(message):
-    result = distilled_student_sentiment_classifier(message)
+def classify_sentiment(chatbot):
+    result = distilled_student_sentiment_classifier(chatbot[-1][-2])
     return result
 
 def change_charactor(charactor):
@@ -247,7 +247,7 @@ with gr.Blocks() as app:
                 [message, chatbot]
             ).then(
                 classify_sentiment,
-                message,
+                chatbot,
                 emotion
             ).then(
                 make_suggestion, 
