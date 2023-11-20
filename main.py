@@ -12,6 +12,8 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
 
+from transformers import pipeline
+
 import gradio as gr
 import json
 
@@ -30,6 +32,14 @@ char_human = "Boy"
 char_aibot = json.load(open(f'./charactor/{charactor_name}.json'))
 
 suggestion = json.dumps("")
+
+distilled_student_sentiment_classifier = pipeline(
+    model="lxyuan/distilbert-base-multilingual-cased-sentiments-student", 
+    return_all_scores=True
+)
+
+sentiment_result = distilled_student_sentiment_classifier("Eirax Darkhunter is a ruggedly handsome man with jet black hair and piercing blue eyes. He wears a worn leather armor and carries a massive greatsword at his side. Despite his fearsome appearance, Eirax has a kind heart and will stop at nothing to protect those he considers friends. His primary motivation is to rid the world of evil forces threatening civilization, and his biggest fear is losing loved ones to darkness.")
+print(sentiment_result)
 
 def create_prompt() -> PipelinePromptTemplate:
     """Creates prompt template"""
