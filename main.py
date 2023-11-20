@@ -38,9 +38,6 @@ distilled_student_sentiment_classifier = pipeline(
     return_all_scores=True
 )
 
-sentiment_result = distilled_student_sentiment_classifier("Eirax Darkhunter is a ruggedly handsome man with jet black hair and piercing blue eyes. He wears a worn leather armor and carries a massive greatsword at his side. Despite his fearsome appearance, Eirax has a kind heart and will stop at nothing to protect those he considers friends. His primary motivation is to rid the world of evil forces threatening civilization, and his biggest fear is losing loved ones to darkness.")
-print(sentiment_result)
-
 def create_prompt() -> PipelinePromptTemplate:
     """Creates prompt template"""
     charactor_prompt = PromptTemplate.from_template(char_aibot["template"])
@@ -55,21 +52,21 @@ Current conversation:
             "aibot": char_aibot["name"]
         }
     )
-    example_prompt = PromptTemplate.from_template(char_aibot["examples"])
+    greeting_prompt = PromptTemplate.from_template(char_aibot["greeting"])
 
     template = """
 I want you to act as the following charactor in first person narrative with emotion and action. Please make a verbose response to extend the plot.
 {charactor}
 
 Example:
-{example}
+{greeting}
 
 {conrecord}"""
 
     final_prompt = PromptTemplate.from_template(template)
     input_prompts = [
         ("charactor", charactor_prompt),
-        ("example", example_prompt),
+        ("greeting", greeting_prompt),
         ("conrecord", conrecord_prompt)
     ]
     pipeline_prompt = PipelinePromptTemplate(
@@ -177,6 +174,10 @@ def make_suggestion(message, history):
     suggestion = json.dumps(response)
     return suggestion
 
+def classify_sentiment(message):
+    result = distilled_student_sentiment_classifier(message)
+    return result
+
 def change_charactor(charactor):
     global charactor_name, char_aibot
     charactor_name = charactor
@@ -206,7 +207,7 @@ with gr.Blocks() as app:
                 label="Please choose a charactor",
                 show_label=True
             )
-            gr.JSON(
+            emotion = gr.JSON(
                 {
                     "favorability": 0,
                 },
@@ -237,16 +238,23 @@ with gr.Blocks() as app:
                     [message, chatbot],
                     value="🗑️ Clear"
                 )
+
+            # Triggered when submit
             gr.on(
                 [message.submit, submit.click],
                 make_response, 
                 [message, chatbot], 
                 [message, chatbot]
             ).then(
+                classify_sentiment,
+                message,
+                emotion
+            ).then(
                 make_suggestion, 
                 [message, chatbot], 
                 com_suggestion
             )
+
             radio_char.change(
                 change_charactor,
                 radio_char,
