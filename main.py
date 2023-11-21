@@ -175,8 +175,17 @@ def make_suggestion(message, history):
     return suggestion
 
 def classify_sentiment(chatbot):
-    result = distilled_student_sentiment_classifier(chatbot[-1][-2])
-    return result
+    global favorability
+    result = distilled_student_sentiment_classifier(chatbot[-1][-2])[0]
+    change = 0
+
+    positive, neutral, negative = [result[i]["score"] for i in range(3)]
+
+    if max([positive, neutral, negative]) != neutral:
+        change = positive - negative
+
+    favorability += change
+    return round(favorability, 2)
 
 def change_charactor(charactor):
     global charactor_name, char_aibot
@@ -185,7 +194,8 @@ def change_charactor(charactor):
     init_chat()
 
 def init_chat():
-    global llm, prompt, prompt_suggest
+    global llm, prompt, prompt_suggest, favorability
+    favorability = 0
     llm = load_model(MODEL_PATH)
     prompt = create_prompt()
     prompt_suggest = create_suggestion_prompt()
@@ -207,12 +217,13 @@ with gr.Blocks() as app:
                 label="Please choose a charactor",
                 show_label=True
             )
-            emotion = gr.JSON(
-                {
-                    "favorability": 0,
-                },
+            emotion = gr.Slider(
+                -10,
+                10,
+                favorability,
                 label="Emotion",
-                show_label=True
+                show_label=True,
+                interactive=False
             )
             com_suggestion = gr.JSON(
                 suggestion,
